@@ -12,4 +12,4 @@ pre-built/linux/
 project-spec/meta-plnx-generated/
 project-spec/hw-description/
 /components/plnx_workspace
-hardware/ZCU104_GPIO/ZCU104_GPIO*
+hardware/ZCU102_GPIO/ZCU102_GPIO*
