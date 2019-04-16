@@ -10,7 +10,7 @@ set proj_dir [get_property directory [current_project]]
 
 # Set project properties
 set obj [get_projects ZCU102_GPIO]
-set_property "board_part" "xilinx.com:zcu104:part0:1.1" $obj
+set_property "board_part" "xilinx.com:zcu102:part0:3.2" $obj
 set_property "simulator_language" "Mixed" $obj
 set_property "target_language" "VHDL" $obj
 
