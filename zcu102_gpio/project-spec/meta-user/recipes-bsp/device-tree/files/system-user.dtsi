@@ -1,3 +1,7 @@
 /include/ "system-conf.dtsi"
 / {
 };
+&dwc3_0 {
+dr_mode = "peripheral";
+status = "okay";
+};
