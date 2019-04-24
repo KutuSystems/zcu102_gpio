@@ -1,0 +1,270 @@
+diff --git a/drivers/usb/dwc3/otg.c b/drivers/usb/dwc3/otg.c
+index db38565..dd0e65a 100644
+--- a/drivers/usb/dwc3/otg.c
++++ b/drivers/usb/dwc3/otg.c
+@@ -226,16 +226,24 @@ static int sleep_until_event(struct dwc3_otg *otg, u32 otg_mask, u32 user_mask,
+ 	return rc;
+ }
+ 
+-static void set_capabilities(struct dwc3_otg *otg)
++static void set_capabilities(struct dwc3_otg *otg , bool is_host)
+ {
+ 	u32 ocfg = 0;
+ 
+ 	otg_dbg(otg, "\n");
+-	if (srp_capable(otg))
+-		ocfg |= OCFG_SRP_CAP;
+-
+-	if (hnp_capable(otg))
+-		ocfg |= OCFG_HNP_CAP;
++   if (srp_capable(otg)) {
++     if (is_host == true)
++        ocfg &= ~OCFG_SRP_CAP;
++     else
++        ocfg |= OCFG_SRP_CAP;
++  }
++
++     if (hnp_capable(otg)) {
++     if (is_host == true)
++        ocfg &= ~OCFG_HNP_CAP;
++     else
++        ocfg |= OCFG_HNP_CAP;
++  }
+ 
+ 	otg_write(otg, OCFG, ocfg);
+ 
+@@ -306,6 +314,8 @@ static int start_host(struct dwc3_otg *otg)
+ 	if (!otg->otg.host)
+ 		return -ENODEV;
+ 
++   otg_info(otg, "GS : Starting Host 1\n");
++
+ 	dctl = otg_read(otg, DCTL);
+ 	if (dctl & DWC3_DCTL_RUN_STOP) {
+ 		otg_dbg(otg, "Disabling the RUN/STOP bit\n");
+@@ -328,6 +338,7 @@ static int start_host(struct dwc3_otg *otg)
+ 	}
+ 
+ 	/* Start host driver */
++   otg_info(otg, "GS : Starting Host 2\n");
+ 
+ 	*(struct xhci_hcd **)hcd->hcd_priv = xhci;
+ 	ret = usb_add_hcd(hcd, otg->hcd_irq, IRQF_SHARED);
+@@ -355,8 +366,7 @@ static int start_host(struct dwc3_otg *otg)
+ 	if (xhci->shared_hcd)
+ 		xhci->shared_hcd->self.otg_port = 1;
+ 
+-	set_capabilities(otg);
+-
++   set_capabilities(otg, true);
+ 	/* Power the port only for A-host */
+ 	if (otg->otg.state == OTG_STATE_A_WAIT_VRISE) {
+ 		/* Spin on xhciPrtPwr bit until it becomes 1 */
+@@ -390,6 +400,7 @@ static int stop_host(struct dwc3_otg *otg)
+ 		otg_info(otg, "Host already stopped\n");
+ 		return 1;
+ 	}
++	otg_info(otg, "GS : stopping host\n");
+ 
+ 	if (!otg->otg.host)
+ 		return -ENODEV;
+@@ -504,7 +515,9 @@ static void start_peripheral(struct dwc3_otg *otg)
+ 		otg_info(otg, "Peripheral already started\n");
+ 		return;
+ 	}
++	otg_info(otg, "GS : Starting Peripheral\n");
+ 
++   set_capabilities(otg , false);
+ 	dwc3_otg_setup_event_buffers(otg);
+ 
+ 	if (dwc->gadget_driver) {
+@@ -563,6 +576,7 @@ static void stop_peripheral(struct dwc3_otg *otg)
+ 		otg_info(otg, "Peripheral already stopped\n");
+ 		return;
+ 	}
++	otg_info(otg, "GS : stopping peripheral\n");
+ 
+ 	if (!gadget)
+ 		return;
+@@ -590,8 +604,7 @@ static enum usb_otg_state do_b_idle(struct dwc3_otg *otg);
+ static int init_b_device(struct dwc3_otg *otg)
+ {
+ 	otg_dbg(otg, "\n");
+-	set_capabilities(otg);
+-
++   set_capabilities(otg , false);
+ 	if (!set_peri_mode(otg, PERI_MODE_PERIPHERAL))
+ 		otg_err(otg, "Failed to start peripheral\n");
+ 
+@@ -1319,16 +1332,16 @@ int otg_main_thread(void *data)
+ 	while (1) {
+ 		enum usb_otg_state next = OTG_STATE_UNDEFINED;
+ 
+-		otg_vdbg(otg, "Main thread entering state\n");
++		otg_info(otg, "Main thread entering state\n");
+ 
+ 		switch (otg->otg.state) {
+ 		case OTG_STATE_UNDEFINED:
+-			otg_dbg(otg, "OTG_STATE_UNDEFINED\n");
++			otg_info(otg, "OTG_STATE_UNDEFINED\n");
+ 			next = do_connector_id_status(otg);
+ 			break;
+ 
+ 		case OTG_STATE_A_IDLE:
+-			otg_dbg(otg, "OTG_STATE_A_IDLE\n");
++			otg_info(otg, "OTG_STATE_A_IDLE\n");
+ 			stop_peripheral(otg);
+ 
+ 			if (prev == OTG_STATE_UNDEFINED)
+@@ -1338,17 +1351,17 @@ int otg_main_thread(void *data)
+ 			break;
+ 
+ 		case OTG_STATE_A_WAIT_VRISE:
+-			otg_dbg(otg, "OTG_STATE_A_WAIT_VRISE\n");
++			otg_info(otg, "OTG_STATE_A_WAIT_VRISE\n");
+ 			next = do_a_wait_vrise(otg);
+ 			break;
+ 
+ 		case OTG_STATE_A_WAIT_BCON:
+-			otg_dbg(otg, "OTG_STATE_A_WAIT_BCON\n");
++			otg_info(otg, "OTG_STATE_A_WAIT_BCON\n");
+ 			next = do_a_wait_bconn(otg);
+ 			break;
+ 
+ 		case OTG_STATE_A_HOST:
+-			otg_dbg(otg, "OTG_STATE_A_HOST\n");
++			otg_info(otg, "OTG_STATE_A_HOST\n");
+ 			stop_peripheral(otg);
+ 			next = do_a_host(otg);
+ 			/* Don't stop the host here if we are going into
+@@ -1361,7 +1374,7 @@ int otg_main_thread(void *data)
+ 			break;
+ 
+ 		case OTG_STATE_A_SUSPEND:
+-			otg_dbg(otg, "OTG_STATE_A_SUSPEND\n");
++			otg_info(otg, "OTG_STATE_A_SUSPEND\n");
+ 			next = do_a_hnp_init(otg);
+ 
+ 			/* Stop the host. */
+@@ -1369,13 +1382,13 @@ int otg_main_thread(void *data)
+ 			break;
+ 
+ 		case OTG_STATE_A_WAIT_VFALL:
+-			otg_dbg(otg, "OTG_STATE_A_WAIT_VFALL\n");
++			otg_info(otg, "OTG_STATE_A_WAIT_VFALL\n");
+ 			next = do_a_wait_vfall(otg);
+ 			stop_host(otg);
+ 			break;
+ 
+ 		case OTG_STATE_A_PERIPHERAL:
+-			otg_dbg(otg, "OTG_STATE_A_PERIPHERAL\n");
++			otg_info(otg, "OTG_STATE_A_PERIPHERAL\n");
+ 			stop_host(otg);
+ 			start_peripheral(otg);
+ 			next = do_a_peripheral(otg);
+@@ -1383,12 +1396,12 @@ int otg_main_thread(void *data)
+ 			break;
+ 
+ 		case OTG_STATE_B_IDLE:
+-			otg_dbg(otg, "OTG_STATE_B_IDLE\n");
++			otg_info(otg, "OTG_STATE_B_IDLE\n");
+ 			next = do_b_idle(otg);
+ 			break;
+ 
+ 		case OTG_STATE_B_PERIPHERAL:
+-			otg_dbg(otg, "OTG_STATE_B_PERIPHERAL\n");
++			otg_info(otg, "OTG_STATE_B_PERIPHERAL\n");
+ 			stop_host(otg);
+ 			start_peripheral(otg);
+ 			next = do_b_peripheral(otg);
+@@ -1396,18 +1409,18 @@ int otg_main_thread(void *data)
+ 			break;
+ 
+ 		case OTG_STATE_B_SRP_INIT:
+-			otg_dbg(otg, "OTG_STATE_B_SRP_INIT\n");
++			otg_info(otg, "OTG_STATE_B_SRP_INIT\n");
+ 			otg_read(otg, OSTS);
+ 			next = do_b_srp_init(otg);
+ 			break;
+ 
+ 		case OTG_STATE_B_WAIT_ACON:
+-			otg_dbg(otg, "OTG_STATE_B_WAIT_ACON\n");
++			otg_info(otg, "OTG_STATE_B_WAIT_ACON\n");
+ 			next = do_b_wait_acon(otg);
+ 			break;
+ 
+ 		case OTG_STATE_B_HOST:
+-			otg_dbg(otg, "OTG_STATE_B_HOST\n");
++			otg_info(otg, "OTG_STATE_B_HOST\n");
+ 			next = do_b_host(otg);
+ 			stop_host(otg);
+ 			break;
+@@ -1426,7 +1439,7 @@ int otg_main_thread(void *data)
+ 	}
+ 
+ 	otg->main_thread = NULL;
+-	otg_dbg(otg, "OTG main thread exiting....\n");
++	otg_info(otg, "OTG main thread exiting....\n");
+ 
+ 	return 0;
+ }
+@@ -1434,7 +1447,7 @@ int otg_main_thread(void *data)
+ static void start_main_thread(struct dwc3_otg *otg)
+ {
+ 	if (!otg->main_thread && otg->otg.gadget && otg->otg.host) {
+-		otg_dbg(otg, "Starting OTG main thread\n");
++		otg_info(otg, "Starting OTG main thread\n");
+ 		otg->main_thread = kthread_create(otg_main_thread, otg, "otg");
+ 		wake_up_process(otg->main_thread);
+ 	}
+@@ -1480,29 +1493,29 @@ static irqreturn_t dwc3_otg_irq(int irq, void *_otg)
+ 			oevt & OEVT_DEV_MOD_EVNT ? "Device" : "Host");
+ 
+ 	if (oevt & OEVT_CONN_ID_STS_CHNG_EVNT)
+-		otg_dbg(otg, "Connector ID Status Change Event\n");
++		otg_info(otg, "Connector ID Status Change Event\n");
+ 	if (oevt & OEVT_HOST_ROLE_REQ_INIT_EVNT)
+-		otg_dbg(otg, "Host Role Request Init Notification Event\n");
++		otg_info(otg, "Host Role Request Init Notification Event\n");
+ 	if (oevt & OEVT_HOST_ROLE_REQ_CONFIRM_EVNT)
+-		otg_dbg(otg, "Host Role Request Confirm Notification Event\n");
++		otg_info(otg, "Host Role Request Confirm Notification Event\n");
+ 	if (oevt & OEVT_A_DEV_B_DEV_HOST_END_EVNT)
+-		otg_dbg(otg, "A-Device B-Host End Event\n");
++		otg_info(otg, "A-Device B-Host End Event\n");
+ 	if (oevt & OEVT_A_DEV_HOST_EVNT)
+-		otg_dbg(otg, "A-Device Host Event\n");
++		otg_info(otg, "A-Device Host Event\n");
+ 	if (oevt & OEVT_A_DEV_HNP_CHNG_EVNT)
+-		otg_dbg(otg, "A-Device HNP Change Event\n");
++		otg_info(otg, "A-Device HNP Change Event\n");
+ 	if (oevt & OEVT_A_DEV_SRP_DET_EVNT)
+-		otg_dbg(otg, "A-Device SRP Detect Event\n");
++		otg_info(otg, "A-Device SRP Detect Event\n");
+ 	if (oevt & OEVT_A_DEV_SESS_END_DET_EVNT)
+-		otg_dbg(otg, "A-Device Session End Detected Event\n");
++		otg_info(otg, "A-Device Session End Detected Event\n");
+ 	if (oevt & OEVT_B_DEV_B_HOST_END_EVNT)
+-		otg_dbg(otg, "B-Device B-Host End Event\n");
++		otg_info(otg, "B-Device B-Host End Event\n");
+ 	if (oevt & OEVT_B_DEV_HNP_CHNG_EVNT)
+-		otg_dbg(otg, "B-Device HNP Change Event\n");
++		otg_info(otg, "B-Device HNP Change Event\n");
+ 	if (oevt & OEVT_B_DEV_SES_VLD_DET_EVNT)
+-		otg_dbg(otg, "B-Device Session Valid Detect Event\n");
++		otg_info(otg, "B-Device Session Valid Detect Event\n");
+ 	if (oevt & OEVT_B_DEV_VBUS_CHNG_EVNT)
+-		otg_dbg(otg, "B-Device VBUS Change Event\n");
++		otg_info(otg, "B-Device VBUS Change Event\n");
+ 
+ 	if (oevt & otg_mask) {
+ 		/* Pass event to main thread */
+@@ -1513,6 +1526,8 @@ static irqreturn_t dwc3_otg_irq(int irq, void *_otg)
+ 		return 1;
+ 	}
+ 
++   otg_info(otg, "GS : didn't wake up after interrupt\n");
++
+ 	return IRQ_HANDLED;
+ }
+ 
