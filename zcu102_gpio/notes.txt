@@ -46,3 +46,15 @@ CONFIG_USB_DWC3_OTG=y
 
 This configuration also appears to work with default kernel, but the size of image.ub is different even though the md5 for the git checkout is the same.
 Loading the G_SERIAL driver might be the reason for the crash.  It doesn't work when compiled in statically.
+
+When disabling USB 3.0 transceiver, usb doesn't work at all.  Loading the g_serial driver gives the following message:
+
+root@zcu102_gpio:~# insmod /run/media/mmcblk0p1/g_serial.ko
+[  126.806819] g_serial gadget: Gadget Serial v2.4
+[  126.811293] g_serial gadget: g_serial ready
+[  126.816164] dwc3 fe200000.dwc3: failed to enable ep0out
+root@zcu102_gpio:~#
+
+After rebuild and boot it appears ok.
+
+Delete zcu102 project after checkin and try again

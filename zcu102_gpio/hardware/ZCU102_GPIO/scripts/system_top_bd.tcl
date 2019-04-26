@@ -17,6 +17,18 @@ proc get_script_folder {} {
 variable script_folder
 set script_folder [_tcl::get_script_folder]
 
+################################################################
+# Check if script is running in correct Vivado version.
+################################################################
+set scripts_vivado_version 2018.2
+set current_vivado_version [version -short]
+
+if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
+   puts ""
+   catch {common::send_msg_id "BD_TCL-109" "ERROR" "This script was generated using Vivado <$scripts_vivado_version> and is being run in <$current_vivado_version> of Vivado. Please run the script in Vivado <$scripts_vivado_version> then open the design in Vivado <$current_vivado_version>. Upgrade the design by running \"Tools => Report => Report IP Status...\", then run write_bd_tcl to create an updated script."}
+
+   return 1
+}
 
 ################################################################
 # START
@@ -77,7 +89,7 @@ if { ${design_name} eq "" } {
    set errMsg "Design <$design_name> already exists in your project, please set the variable <design_name> to another value."
    set nRet 1
 } elseif { [get_files -quiet ${design_name}.bd] ne "" } {
-   # USE CASES:
+   # USE CASES: 
    #    6) Current opened design, has components, but diff names, design_name exists in project.
    #    7) No opened design, design_name exists in project.
 
@@ -111,7 +123,7 @@ set bCheckIPsPassed 1
 ##################################################################
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
-   set list_check_ips "\
+   set list_check_ips "\ 
 kutu.com.au:kutu:kutu_gpio:1.0\
 kutu.com.au:kutu:kutu_msp430:1.0\
 xilinx.com:ip:proc_sys_reset:5.0\
@@ -852,12 +864,12 @@ proc create_root_design { parentCell } {
    CONFIG.PSU__USB0_COHERENCY {0} \
    CONFIG.PSU__USB0__PERIPHERAL__ENABLE {1} \
    CONFIG.PSU__USB0__PERIPHERAL__IO {MIO 52 .. 63} \
-   CONFIG.PSU__USB0__REF_CLK_FREQ {26} \
-   CONFIG.PSU__USB0__REF_CLK_SEL {Ref Clk2} \
+   CONFIG.PSU__USB0__REF_CLK_FREQ {<Select>} \
+   CONFIG.PSU__USB0__REF_CLK_SEL {<Select>} \
    CONFIG.PSU__USB2_0__EMIO__ENABLE {0} \
    CONFIG.PSU__USB3_0__EMIO__ENABLE {0} \
-   CONFIG.PSU__USB3_0__PERIPHERAL__ENABLE {1} \
-   CONFIG.PSU__USB3_0__PERIPHERAL__IO {GT Lane2} \
+   CONFIG.PSU__USB3_0__PERIPHERAL__ENABLE {0} \
+   CONFIG.PSU__USB3_0__PERIPHERAL__IO {<Select>} \
    CONFIG.PSU__USE__IRQ0 {1} \
    CONFIG.PSU__USE__M_AXI_GP0 {1} \
    CONFIG.PSU__USE__M_AXI_GP1 {0} \
@@ -901,3 +913,7 @@ proc create_root_design { parentCell } {
 ##################################################################
 
 create_root_design ""
+
+
+common::send_msg_id "BD_TCL-1000" "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
+
