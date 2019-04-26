@@ -43,3 +43,5 @@ CONFIG_PM=y
 CONFIG_USB_OTG=y
 CONFIG_USB_OTG_FSM=y
 CONFIG_USB_DWC3_OTG=y
+
+This configuration also appears to work with default kernel, but the size of image.ub is different even though the md5 for the git checkout is the same.
