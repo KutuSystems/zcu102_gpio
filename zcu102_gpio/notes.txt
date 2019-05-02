@@ -58,3 +58,10 @@ root@zcu102_gpio:~#
 After rebuild and boot it appears ok.
 
 Delete zcu102 project after checkin and try again
+
+
+Re-enabling the USB3.0 and pointing to the 100MHz clock and disabling PCIe causes system not to boot past the FSBL.  This is because the clock doesn't seem to enable.
+
+When PCIe is re-enabled, the system boots as normal, but USB doesn't respond.  It appears as though the 100MHz USB clock option is not working, but other configuration may be required.
+
+When disabling PCIe/SATA/DP and setting USB to use 26Mhz clock, but pointing to a different transceiver doesn't boot
