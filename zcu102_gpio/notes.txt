@@ -1,0 +1,60 @@
+ZCU102 USB OTG testing
+
+
+Using the following settings I find OTG works with clean build, but CDC ACM doesn't load.
+If I rebuild I get driver crashes after modifying config
+
+# CONFIG_U_SERIAL_CONSOLE is not set
+CONFIG_USB_LIBCOMPOSITE=y
+CONFIG_USB_F_ACM=y
+CONFIG_USB_U_SERIAL=y
+CONFIG_USB_F_SERIAL=y
+# CONFIG_USB_F_OBEX=m
+# CONFIG_USB_F_MASS_STORAGE=m
+CONFIG_USB_CONFIGFS=y
+CONFIG_USB_CONFIGFS_ACM=y
+CONFIG_CONFIGFS_FS=y
+# CONFIG_USB_CONFIGFS_EEM is not set
+# CONFIG_USB_CONFIGFS_MASS_STORAGE is not set
+# CONFIG_USB_ETH is not set
+CONFIG_USB_G_SERIAL=y
+CONFIG_PM=y
+CONFIG_USB_OTG=y
+CONFIG_USB_OTG_FSM=y
+CONFIG_USB_DWC3_OTG=y
+
+If I change to following and load g_serial after boot then CDC ACM is reliable. Also mouns USB drive and MS mouse/kbd transceiver with no problems
+
+# CONFIG_U_SERIAL_CONSOLE is not set
+CONFIG_USB_LIBCOMPOSITE=y
+CONFIG_USB_F_ACM=y
+CONFIG_USB_U_SERIAL=y
+CONFIG_USB_F_SERIAL=y
+# CONFIG_USB_F_OBEX=m
+# CONFIG_USB_F_MASS_STORAGE=m
+CONFIG_USB_CONFIGFS=y
+CONFIG_USB_CONFIGFS_ACM=y
+CONFIG_CONFIGFS_FS=y
+# CONFIG_USB_CONFIGFS_EEM is not set
+# CONFIG_USB_CONFIGFS_MASS_STORAGE is not set
+# CONFIG_USB_ETH is not set
+CONFIG_USB_G_SERIAL=m
+CONFIG_PM=y
+CONFIG_USB_OTG=y
+CONFIG_USB_OTG_FSM=y
+CONFIG_USB_DWC3_OTG=y
+
+This configuration also appears to work with default kernel, but the size of image.ub is different even though the md5 for the git checkout is the same.
+Loading the G_SERIAL driver might be the reason for the crash.  It doesn't work when compiled in statically.
+
+When disabling USB 3.0 transceiver, usb doesn't work at all.  Loading the g_serial driver gives the following message:
+
+root@zcu102_gpio:~# insmod /run/media/mmcblk0p1/g_serial.ko
+[  126.806819] g_serial gadget: Gadget Serial v2.4
+[  126.811293] g_serial gadget: g_serial ready
+[  126.816164] dwc3 fe200000.dwc3: failed to enable ep0out
+root@zcu102_gpio:~#
+
+After rebuild and boot it appears ok.
+
+Delete zcu102 project after checkin and try again
